@@ -1,4 +1,4 @@
-GCC_PATH = /Applications/ARM/bin
+GCC_PATH = 
 
 ifdef DEBUG
 	NO_ECHO :=
@@ -6,11 +6,11 @@ else
 	NO_ECHO := @
 endif
 
-CC      = $(GCC_PATH)/arm-none-eabi-gcc
-LD      = $(GCC_PATH)/arm-none-eabi-ld
-OCPY    = $(GCC_PATH)/arm-none-eabi-objcopy
-ODUMP   = $(GCC_PATH)/arm-none-eabi-objdump
-SZ      = $(GCC_PATH)/arm-none-eabi-size
+CC      = $(GCC_PATH)arm-none-eabi-gcc
+LD      = $(GCC_PATH)arm-none-eabi-ld
+OCPY    = $(GCC_PATH)arm-none-eabi-objcopy
+ODUMP   = $(GCC_PATH)arm-none-eabi-objdump
+SZ      = $(GCC_PATH)arm-none-eabi-size
 MKDIR   = mkdir
 
 
@@ -20,25 +20,24 @@ CFLAGS +=   -nostdlib\
 			-mtune=arm7tdmi \
 			-mthumb-interwork -mthumb\
 			-ffunction-sections \
-			-Os
+			-Oz
 			
 #-fdata-sections
 
-LDFLAGS += -T cxd2680.ld #--just-symbols cxd2680v1.6.sym 
-SRCSs = unit.c 
-SRCS = firmware.c display.c button.c tetris.c main.c 
+LDFLAGS += -T cxd2680.ld --just-symbols cxd2680.ld.sym 
+SRCS = xfer.c 
 INCLUDES += ./
 
-TARGET_VERSION=S10
+TARGET_VERSION=S16
 
 CFLAGS += $(foreach i,$(INCLUDES),-I$(i)) -DFW_${TARGET_VERSION}=1
 OBJS = $(patsubst %.c,build/objs/%.o,$(SRCS))
 
-all: build/minitris.bin
-	hexdump -v -e '"\\" "x" 1/1 "%02X"' build/minitris.bin > hex_builds/minitris_${TARGET_VERSION}.shex
-	hexdump -v -e '1/1 "%02X"' build/minitris.bin > hex_builds/minitris_${TARGET_VERSION}.hex
-	wc -c build/minitris.bin
-	cp build/minitris.bin build/minitris_${TARGET_VERSION}.bin
+all: build/lyrics.bin
+	hexdump -v -e '"\\" "x" 1/1 "%02X"' build/lyrics.bin > hex_builds/lyrics_${TARGET_VERSION}.shex
+	hexdump -v -e '1/1 "%02X"' build/lyrics.bin > hex_builds/lyrics_${TARGET_VERSION}.hex
+	wc -c build/lyrics.bin
+	cp build/lyrics.bin build/lyrics_${TARGET_VERSION}.bin
 
 build:
 	mkdir -p build
@@ -51,16 +50,16 @@ build/objs/%.o: %.c build/objs
 	mkdir -p $(dir $@)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-build/minitris.bin: build/minitris.elf build/minitris.lst
+build/lyrics.bin: build/lyrics.elf build/lyrics.lst
 	$(OCPY) $< $@ -O binary
 	$(SZ) $<
 
-build/minitris.lst: build/minitris.elf build
+build/lyrics.lst: build/lyrics.elf build
 	$(ODUMP) -D $< > $@
 
-build/minitris.elf: $(OBJS)
+build/lyrics.elf: $(OBJS)
 	@echo "Linking $@"
 	$(LD) $^ $(LDFLAGS) -o $@
 
 clean:
-	rm -rf build/objs build/minitris.*
+	rm -rf build/objs build/lyrics.*

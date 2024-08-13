@@ -1,0 +1,5 @@
+= MD+G (WIP)
+
+MiniDisc plus Graphics (work in progress)
+
+Scrolls lyrics on the screen of an MZ-N510 or MZ-N520 running FW 1.6

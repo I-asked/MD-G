@@ -1,0 +1,2 @@
+atrac_read = 0x781fc;
+atrac_write = 0x782c4;
