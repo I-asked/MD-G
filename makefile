@@ -14,17 +14,17 @@ SZ      = $(GCC_PATH)arm-none-eabi-size
 MKDIR   = mkdir
 
 
-CFLAGS +=   -nostdlib\
+CFLAGS +=   -nostdlib \
 			-ffreestanding \
 			-march=armv4t \
 			-mtune=arm7tdmi \
-			-mthumb-interwork -mthumb\
-			-ffunction-sections \
+			-mthumb-interwork -mthumb \
+			-ffunction-sections -mlong-calls \
 			-Oz
 			
 #-fdata-sections
 
-LDFLAGS += -T cxd2680.ld --just-symbols cxd2680.ld.sym 
+LDFLAGS += -T cxd2680.ld --just-symbols cxd2680.ld.sym
 SRCS = xfer.c 
 INCLUDES += ./
 

@@ -9,11 +9,13 @@
 #define D_SZ (4096)
 #define C_SZ (2048)
 
-extern void atrac_read(unsigned short sector_nr, unsigned short byte_ofs,
-                       uint8_t *data, unsigned int count);
+[[gnu::naked]] void atrac_read(unsigned short sector_nr,
+                               unsigned short byte_ofs, uint8_t *data,
+                               unsigned int count) {}
 
-extern void atrac_write(unsigned short sector_nr, unsigned short byte_ofs,
-                        const uint8_t *data, unsigned int count);
+[[gnu::naked]] void atrac_write(unsigned short sector_nr,
+                                unsigned short byte_ofs, const uint8_t *data,
+                                unsigned int count) {}
 
 static unsigned int djb2(const uint8_t *buf, int sz) {
   unsigned int hash = 5381;
