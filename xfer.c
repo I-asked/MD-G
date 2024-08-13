@@ -2,12 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static void (*atrac_read)(unsigned short sector_nr, unsigned short byte_ofs,
-                          uint8_t *data, unsigned int count) = (void *)0x7ea3d;
-
-static void (*atrac_write)(unsigned short sector_nr, unsigned short byte_ofs,
-                           const uint8_t *data,
-                           unsigned int count) = (void *)0x7e9d1;
+#define MY_API static
 
 #define SEC_TSTMP (0x2)
 #define SEC_SZ (0x91c)
@@ -15,6 +10,33 @@ static void (*atrac_write)(unsigned short sector_nr, unsigned short byte_ofs,
 
 #define D_SZ (4096)
 #define C_SZ (2048)
+
+[[noreturn]] inline static void abort() {
+  for (;;)
+    __asm__ __volatile__(R"(
+     .thumb
+
+    mov r0,#0
+    bx r0
+    )"); // lol
+}
+
+#define assert(E)                                                              \
+  do {                                                                         \
+    if (!(E))                                                                  \
+      abort();                                                                 \
+  } while (false)
+
+static void (*atrac_read_metadata)(unsigned short sector_nr,
+                                   unsigned short byte_ofs, uint8_t *data,
+                                   unsigned int count) = (void *)0x7ea3d;
+
+static void (*atrac_write_metadata)(unsigned short sector_nr,
+                                    unsigned short byte_ofs,
+                                    const uint8_t *data,
+                                    unsigned int count) = (void *)0x7e9d1;
+
+static void (*tron_dly_tsk)(unsigned int t) = (void *)0x7c201;
 
 static unsigned int djb2(const uint8_t *buf, int sz) {
   unsigned int hash = 5381;
@@ -34,11 +56,11 @@ typedef struct [[gnu::packed, gnu::aligned(1)]] TrackHeader {
 } TrackHeader;
 _Static_assert(sizeof(TrackHeader) == 8, "TrackHeader");
 
-static int uncompress(const uint8_t *data, size_t data_length, uint8_t *dest,
-                      size_t dest_length) {
+static int lz4_decompress(const uint8_t *data, size_t data_length,
+                          uint8_t *dest, size_t dest_length) {
   size_t op = 0, ip = 0;
   for (;;) {
-    uint8_t token = data[ip++];
+    const uint8_t token = data[ip++];
     int length = token >> 4;
     if (length == 15) {
       do {
@@ -53,9 +75,7 @@ static int uncompress(const uint8_t *data, size_t data_length, uint8_t *dest,
 
     int offset = data[ip] | (data[ip + 1] << 8);
     ip += 2;
-    if (offset == 0) {
-      return -1;
-    }
+    assert(offset != 0);
 
     size_t matchp = op - offset;
     int matchlength = (token & 15) + 4;
@@ -91,25 +111,25 @@ typedef union {
   };
 } CBuffer;
 static CBuffer g_cbuffer = {
-    .size = 113,
-    .data = {203, 0,   0,   0,   244, 60,  74,  97,  44,  32,  119, 105, 114,
-             32,  114, 101, 105, 115, 101, 110, 32,  117, 109, 32,  100, 105,
-             101, 32,  87,  101, 108, 116, 10,  69,  109, 111, 45,  71,  105,
-             114, 108, 115, 32,  105, 109, 32,  112, 114, 105, 118, 97,  116,
-             101, 32,  106, 101, 116, 10,  76,  105, 108, 97,  32,  99,  97,
-             115, 104, 32,  105, 109, 32,  80,  114, 97,  100, 97,  32,  98,
-             97,  103, 10,  75,  0,   247, 1,   104, 97,  98,  101, 110, 32,
-             122, 117, 32,  118, 105, 101, 108, 32,  115, 119, 27,  0,   15,
-             102, 0,   69,  80,  32,  115, 119, 97,  103}};
+    .size = 109,
+    .data = {244, 60,  74,  97,  44,  32,  119, 105, 114, 32,  114, 101, 105,
+             115, 101, 110, 32,  117, 109, 32,  100, 105, 101, 32,  87,  101,
+             108, 116, 10,  69,  109, 111, 45,  71,  105, 114, 108, 115, 32,
+             105, 109, 32,  112, 114, 105, 118, 97,  116, 101, 32,  106, 101,
+             116, 10,  76,  105, 108, 97,  32,  99,  97,  115, 104, 32,  105,
+             109, 32,  80,  114, 97,  100, 97,  32,  98,  97,  103, 10,  75,
+             0,   247, 1,   104, 97,  98,  101, 110, 32,  122, 117, 32,  118,
+             105, 101, 108, 32,  115, 119, 27,  0,   15,  102, 0,   69,  80,
+             32,  115, 119, 97,  103}};
 _Static_assert(sizeof(g_cbuffer.mem) ==
                    sizeof(g_cbuffer.data) + sizeof(g_cbuffer.size),
                "g_cbuffer");
 
-const DBuffer *read_lyrics(int track) {
+MY_API const DBuffer *read_lyrics(int track) {
   TrackHeader header;
   int j = 0;
   while (j < SEC_SZ) {
-    atrac_read(SEC_TSTMP, j, (uint8_t *)&header, sizeof(header));
+    atrac_read_metadata(SEC_TSTMP, j, (uint8_t *)&header, sizeof(header));
     if (header.size > SEC_SZ - j - sizeof(header) ||
         header.size > sizeof(g_cbuffer.data)) {
       return NULL;
@@ -119,13 +139,14 @@ const DBuffer *read_lyrics(int track) {
     }
     if (header.track == track && header.enabled) {
       g_cbuffer.size = header.size;
-      atrac_read(SEC_TSTMP, j + sizeof(header), g_cbuffer.data, g_cbuffer.size);
+      atrac_read_metadata(SEC_TSTMP, j + sizeof(header), g_cbuffer.data,
+                          g_cbuffer.size);
       if ((djb2(g_cbuffer.mem, sizeof(g_cbuffer.mem)) & 0xFFFFFF) !=
           header.cksum) {
         return NULL;
       }
-      g_dbuffer.size = uncompress(g_cbuffer.data, g_cbuffer.size,
-                                  g_dbuffer.data, sizeof(g_dbuffer.data));
+      g_dbuffer.size = lz4_decompress(g_cbuffer.data, g_cbuffer.size,
+                                      g_dbuffer.data, sizeof(g_dbuffer.data));
       return &g_dbuffer;
     }
     j += sizeof(header) + header.size;
@@ -140,16 +161,22 @@ static _Bool overwrite_lyrics(int off, int track, const CBuffer *comp) {
   header.track = track;
   header.size = comp->size;
   header.enabled = 1;
-  atrac_write(SEC_TSTMP, off, (uint8_t *)&header, sizeof(header));
-  atrac_write(SEC_TSTMP, off + sizeof(header), comp->data, comp->size);
+  atrac_write_metadata(SEC_TSTMP, off, (uint8_t *)&header, sizeof(header));
+  for (int i = 0; i < comp->size; i += 8) {
+    if (i + 8 > comp->size) {
+      atrac_write_metadata(SEC_TSTMP, off + sizeof(header) + i, comp->data, comp->size % 8);
+      break;
+    }
+    atrac_write_metadata(SEC_TSTMP, off + sizeof(header) + i, comp->data, 8);
+  }
   return true;
 }
 
-_Bool write_lyrics(int track, const CBuffer *comp) {
+MY_API _Bool write_lyrics(int track, const CBuffer *comp) {
   TrackHeader header;
   int j = 0;
   while (j < SEC_SZ) {
-    atrac_read(SEC_TSTMP, j, (uint8_t *)&header, sizeof(header));
+    atrac_read_metadata(SEC_TSTMP, j, (uint8_t *)&header, sizeof(header));
     if (header.size > SEC_SZ - j - sizeof(header) ||
         header.size > sizeof(g_cbuffer.data)) {
       break;
@@ -159,13 +186,13 @@ _Bool write_lyrics(int track, const CBuffer *comp) {
     }
     if (header.enabled && header.track == track) {
       header.enabled = false;
-      atrac_write(SEC_TSTMP, j, (uint8_t *)&header, sizeof(header));
+      atrac_write_metadata(SEC_TSTMP, j, (uint8_t *)&header, sizeof(header));
     }
     j += sizeof(header) + header.size;
   }
   j = 0;
   while (j < SEC_SZ) {
-    atrac_read(SEC_TSTMP, j, (uint8_t *)&header, sizeof(header));
+    atrac_read_metadata(SEC_TSTMP, j, (uint8_t *)&header, sizeof(header));
     if (header.size > SEC_SZ - j - sizeof(header) ||
         header.size > sizeof(g_cbuffer.data)) {
       return overwrite_lyrics(j, track, comp);
@@ -190,6 +217,7 @@ void main(void) {
              "haben zu viel swag";
   write_lyrics(0, &g_cbuffer);
   const DBuffer *l = read_lyrics(0);
+
   for (const uint8_t *p = q, *m = l->data; *p != '\0'; ++p, ++m) {
     if (*p != *m) {
       __asm__ __volatile__(R"(
