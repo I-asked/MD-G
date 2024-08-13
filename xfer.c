@@ -2,20 +2,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static void (*atrac_read)(unsigned short sector_nr, unsigned short byte_ofs,
+                          uint8_t *data, unsigned int count) = (void *)0x7ea3d;
+
+static void (*atrac_write)(unsigned short sector_nr, unsigned short byte_ofs,
+                           const uint8_t *data,
+                           unsigned int count) = (void *)0x7e9d1;
+
 #define SEC_TSTMP (0x2)
 #define SEC_SZ (0x91c)
 #define MY_MAGIC (0x1307)
 
 #define D_SZ (4096)
 #define C_SZ (2048)
-
-[[gnu::naked]] void atrac_read(unsigned short sector_nr,
-                               unsigned short byte_ofs, uint8_t *data,
-                               unsigned int count) {}
-
-[[gnu::naked]] void atrac_write(unsigned short sector_nr,
-                                unsigned short byte_ofs, const uint8_t *data,
-                                unsigned int count) {}
 
 static unsigned int djb2(const uint8_t *buf, int sz) {
   unsigned int hash = 5381;

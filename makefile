@@ -19,13 +19,15 @@ CFLAGS +=   -nostdlib \
 			-march=armv4t \
 			-mtune=arm7tdmi \
 			-mthumb-interwork -mthumb \
-			-ffunction-sections -mlong-calls \
-			-Oz
-			
+			-ffunction-sections \
+			-Oz \
+			-Wl,-T,cxd2680.ld #,--just-symbols,cxd2680.ld.sym
+
+#-mlong-calls
 #-fdata-sections
 
-LDFLAGS += -T cxd2680.ld --just-symbols cxd2680.ld.sym
-SRCS = xfer.c 
+LDFLAGS += 
+SRCS = xfer.c # common.c
 INCLUDES += ./
 
 TARGET_VERSION=S16
@@ -59,7 +61,7 @@ build/lyrics.lst: build/lyrics.elf build
 
 build/lyrics.elf: $(OBJS)
 	@echo "Linking $@"
-	$(LD) $^ $(LDFLAGS) -o $@
+	$(CC) $^ $(CFLAGS) -o $@
 
 clean:
 	rm -rf build/objs build/lyrics.*
