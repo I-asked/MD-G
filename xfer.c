@@ -164,10 +164,10 @@ static _Bool overwrite_lyrics(int off, int track, const CBuffer *comp) {
   atrac_write_metadata(SEC_TSTMP, off, (uint8_t *)&header, sizeof(header));
   for (int i = 0; i < comp->size; i += 8) {
     if (i + 8 > comp->size) {
-      atrac_write_metadata(SEC_TSTMP, off + sizeof(header) + i, comp->data, comp->size % 8);
+      atrac_write_metadata(SEC_TSTMP, off + sizeof(header) + i, comp->data + i, comp->size % 8);
       break;
     }
-    atrac_write_metadata(SEC_TSTMP, off + sizeof(header) + i, comp->data, 8);
+    atrac_write_metadata(SEC_TSTMP, off + sizeof(header) + i, comp->data + i, 8);
   }
   return true;
 }
