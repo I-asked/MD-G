@@ -1,0 +1,3 @@
+= HBLoader for NetMD
+
+This should eventually become capable of loading homebrew from specially prepared MDs...
