@@ -1,3 +1,23 @@
 = HBLoader for NetMD
 
 This should eventually become capable of loading homebrew from specially prepared MDs...
+
+== Building
+
+. Clone the repo
+. Create a directory for build
+. `cd` into it
+. `make -f ../hbloader/Makefile hbl.bin`
+
+== Building Homebrew
+
+. Clone the repo
+. Create a homebrew program using `/lyrics` as the reference
+. Create a directory for build
+. `cd` into it
+. `make -f ../hbloader/Makefile hbl.ld`
+. `make -f /path/to/homebrew/Makefile`
+
+== Credits
+
+baselibc
