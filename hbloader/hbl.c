@@ -47,10 +47,10 @@ struct [[gnu::packed, gnu::aligned(1)]] HBHeader {
   uint16_t blksz : 10;
 } g_hbHeader;
 
-[[gnu::visibility("hidden"), noreturn]] void _boot(void) {
+[[gnu::visibility("hidden")]] void _boot(void) {
   void *pdec = (void *)0x2005500 + 0x1000;
   void *pcom = (void *)0x2008f00 - 0x400;
-  int isrc = 0;
+  int chunks = 0, isrc = 0;
   for (;;) {
     atrac_read_metadata(3, isrc, (uint8_t *)&g_hbHeader, sizeof(g_hbHeader));
     if (g_hbHeader.magic != MD_HB_MAGIC) {
@@ -63,10 +63,13 @@ struct [[gnu::packed, gnu::aligned(1)]] HBHeader {
     int ret = lz4_decompress(pcom, g_hbHeader.blksz, pdec, pcom - pdec);
     assert(ret > 0);
     pdec += ret;
+    ++chunks;
   }
-  __asm__ __volatile__(R"(
-  bx pc
-  .word 0x2006501
-  )");
-  __builtin_unreachable();
+  if (chunks) {
+    __asm__ __volatile__(R"(
+    bx pc
+    .word 0x2006B01
+    )");
+    __builtin_unreachable();
+  }
 }
