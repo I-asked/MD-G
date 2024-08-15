@@ -1,4 +1,4 @@
-GCC_PREFIX = arm-none-eabi-
+GCC_PREFIX ?= arm-none-eabi-
 
 AS      = $(GCC_PREFIX)as
 CC      = $(GCC_PREFIX)gcc
@@ -25,21 +25,23 @@ LDFLAGS += \
 					 -ffreestanding \
 					 $(CFLAGS)
 
-OBJS = S16.o xfer.o meta_lrc.o util.o
+PROJECT := hbl
+
+TARGET_VERSION ?= S16
+
+OBJS = lyrics_$(TARGET_VERSION).o lyrics.o meta_lrc.o util.o
 DEPS = $(OBJS:.o=.d)
 
 vpath %.c $(dir $(MAKEFILE_LIST))
 vpath %.s $(dir $(MAKEFILE_LIST))
 
-TARGET_VERSION = S16
-
-xfer.bin: xfer
+$(PROJECT).bin: $(PROJECT)
 	$(OCPY) $< $@ -O binary
 
-xfer: $(OBJS)
+$(PROJECT): $(OBJS)
 
 .PHONY: clean
 clean:
-	$(RM) -rf xfer.elf xfer.bin $(OBJS) $(DEPS)
+	$(RM) -rf $(PROJECT) $(PROJECT).bin $(OBJS) $(DEPS)
 
 -include $(DEPS)

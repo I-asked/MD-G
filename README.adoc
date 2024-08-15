@@ -3,3 +3,19 @@
 MiniDisc plus Graphics (work in progress)
 
 Scrolls lyrics on the screen of an MZ-N510 or MZ-N520 running FW 1.6
+
+== Building on UNIX
+
+. `mkdir build`
+. `cd build/`
+. `gmake -f ../GNUmakefile`
+
+== Running using HBLoader
+
+_TODO_
+
+== HBLoader
+
+HBLoader provides a basic libc for Homebrew apps.
+
+See `lyrics/` for reference.

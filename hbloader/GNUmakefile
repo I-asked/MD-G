@@ -1,6 +1,6 @@
-GCC_PREFIX = arm-none-eabi-
+GCC_PREFIX ?= arm-none-eabi-
 
-MODLDGEN ?= ../modldgen
+MODLDGEN ?= ./modldgen
 
 AS      = $(GCC_PREFIX)as
 CC      = $(GCC_PREFIX)gcc
@@ -27,9 +27,12 @@ LDFLAGS += \
 					 -ffreestanding \
 					 $(CFLAGS)
 
+PROJECT := hbl
+
+TARGET_VERSION ?= S16
 
 OBJS = \
-			 hbl.o S16.o \
+			 hbl.o $(PROJECT)_$(TARGET_VERSION).o \
 			 atol.o atoll.o \
 			 bsearch.o bzero.o \
 			 qsort.o \
@@ -42,7 +45,7 @@ OBJS = \
 			 strcasecmp.o strchr.o strcspn.o strlcat.o strlcpy.o strncasecmp.o strncmp.o strnlen.o strntoimax.o strpbrk.o strrchr.o strsep.o strspn.o strstr.o strtoimax.o strtok.o strtok_r.o strtoll.o strtoull.o \
 			 memccpy.o memchr.o memmem.o memmove.o memrchr.o memswap.o \
 			 vsprintf.o vsscanf.o tinyprintf.o
-			 # memcmp.o memcpy.o memset.o
+			 #memcmp.o memcpy.o memset.o
 			 #atoi.o strcat.o strcmp.o strcpy.o strdup.o strlen.o strncat.o strncpy.o strndup.o strtol.o strtoul.o
 			 #fgets.o \
 			 #tinyprintf.o vprintf.o 
@@ -57,16 +60,19 @@ DEPS = $(OBJS:.o=.d)
 vpath %.c $(dir $(MAKEFILE_LIST))
 vpath %.s $(dir $(MAKEFILE_LIST))
 
-hbl.ld: hbl
+.PHONY: all
+all: $(PROJECT).ld $(PROJECT).bin
+
+$(PROJECT).ld: $(PROJECT)
 	$(MODLDGEN) $< $@
 
-hbl.bin: hbl
+$(PROJECT).bin: $(PROJECT)
 	$(OCPY) $< $@ -O binary
 
-hbl: $(OBJS)
+$(PROJECT): $(OBJS)
 
 .PHONY: clean
 clean:
-	$(RM) -rf xfer.elf xfer.bin $(OBJS) $(DEPS)
+	$(RM) -rf $(PROJECT) $(PROJECT).bin $(PROJECT).ld $(OBJS) $(DEPS)
 
 -include $(DEPS)
